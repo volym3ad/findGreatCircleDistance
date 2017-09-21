@@ -1,9 +1,9 @@
 package main
 
 import ("github.com/go-martini/martini"
-		"github.com/kellydunn/golang-geo"
+        "github.com/kellydunn/golang-geo"
         "strings"
-		"strconv"
+        "strconv"
         "regexp")
 
 // Lon stands for Longitude

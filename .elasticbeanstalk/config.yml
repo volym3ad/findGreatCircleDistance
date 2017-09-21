@@ -1,0 +1,18 @@
+branch-defaults:
+  default:
+    environment: dev-env
+    group_suffix: null
+global:
+  application_name: labcloud
+  branch: null
+  default_ec2_keyname: vvoloshyn-softserve
+  default_platform: Go 1.8
+  default_region: us-west-2
+  include_git_submodules: true
+  instance_profile: null
+  platform_name: null
+  platform_version: null
+  profile: null
+  repository: null
+  sc: null
+  workspace_type: Application

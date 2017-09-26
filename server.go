@@ -2,9 +2,16 @@ package main
 
 import ("github.com/go-martini/martini"
         "github.com/kellydunn/golang-geo"
+        "github.com/go-redis/redis" // go client for redis
+        
         "strings"
         "strconv"
-        "regexp")
+        "regexp"
+        )
+
+var (
+    match = "^.*[0-9],.*[0-9]$"
+)
 
 // Lon stands for Longitude
 // Lat stands for Latitude
@@ -36,15 +43,26 @@ func regexpStringMatching(text string, reg string) bool {
 
 func main() {
 
+    client := redis.NewClient(&redis.Options{
+        Addr:     "127.0.0.1:6379",
+        Password: "", // no password set
+        DB:       0,  // use default DB
+    })
+    var iter int = 1
+
+    martini.Env = martini.Prod
     m := martini.Classic()
+
     m.Get("/", func() string {
     	return "This program helps you calculate Great Circle Distance"
     	})
 
     m.Get("/find/:from/:to", func(params martini.Params) (int, string) {
 
-        // regexp matching
-        match := "^.*[0-9],.*[0-9]$"        
+        key := iter
+        value := params["from"]+";"+params["to"]
+
+        // regexp matching    
         if !regexpStringMatching(params["from"], match) || !regexpStringMatching(params["to"], match) {
             return 400, "Bad Request => from and to params must be ^.*[0-9],.*[0-9]$"
         }
@@ -64,7 +82,30 @@ func main() {
             }
         }
 
-        return 200, "Great Circle Distance is " + findGreatCircleDistance(x[0],x[1],y[0],y[1]) + " km"
+        err := client.Set(strconv.Itoa(key), value, 0).Err()
+        if err != nil {
+            panic(err)
+        }
+        
+        iter += 1
+        return 200, "Great Circle Distance is " + findGreatCircleDistance(x[0],x[1],y[0],y[1]) + " km"    
+        })
+
+    m.Get("/history", func() string {
+        
+        // last 5 history requests
+        var values [5] string
+        var err_value error
+        for i:=0; i < iter-1; i++ {
+            values[i], err_value = client.Get(strconv.Itoa(i+1)).Result()
+            if err_value == redis.Nil {
+                return "key does not exists"
+            } else if err_value != nil {
+                panic(err_value)
+            }
+        }
+
+        return strings.Join(values[:], "\n")
         })
 
     m.Get("/test", func() string {

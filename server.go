@@ -1,7 +1,7 @@
 package main
 
 import ("github.com/go-martini/martini"
-        "github.com/kellydunn/golang-geo"
+        "github.com/kellydunn/golang-geo" // main lib for great distance search
         "github.com/go-redis/redis" // go client for redis
         
         "strings"
@@ -9,9 +9,24 @@ import ("github.com/go-martini/martini"
         "regexp"
         )
 
+// refactoring is needed!!!!
+
 var (
     match = "^.*[0-9],.*[0-9]$"
+    iter = 1
 )
+
+// add exception to server initialization
+func redisDBInitialization(address string,
+                           password string,
+                           database int) *redis.Client {
+
+    return redis.NewClient(&redis.Options{
+        Addr:     address,
+        Password: password,
+        DB:       database,
+    })
+}
 
 // Lon stands for Longitude
 // Lat stands for Latitude
@@ -43,14 +58,8 @@ func regexpStringMatching(text string, reg string) bool {
 
 func main() {
 
-    client := redis.NewClient(&redis.Options{
-        Addr:     "127.0.0.1:6379",
-        Password: "", // no password set
-        DB:       0,  // use default DB
-    })
-    var iter int = 1
-
-    martini.Env = martini.Prod
+    client := redisDBInitialization("127.0.0.1:6379", "", 0) // 0 means to use default Redis db
+    martini.Env = martini.Prod // cause development is too easy =p
     m := martini.Classic()
 
     m.Get("/", func() string {
@@ -60,7 +69,7 @@ func main() {
     m.Get("/find/:from/:to", func(params martini.Params) (int, string) {
 
         key := iter
-        value := params["from"]+";"+params["to"]
+        value := params["from"]+" ; "+params["to"]
 
         // regexp matching    
         if !regexpStringMatching(params["from"], match) || !regexpStringMatching(params["to"], match) {
@@ -93,8 +102,10 @@ func main() {
 
     m.Get("/history", func() string {
         
-        // last 5 history requests
-        var values [5] string
+        // latest history requests
+        // not sure we need to declare array here -_-
+
+        values := make([]string, iter)
         var err_value error
         for i:=0; i < iter-1; i++ {
             values[i], err_value = client.Get(strconv.Itoa(i+1)).Result()
@@ -109,6 +120,7 @@ func main() {
         })
 
     m.Get("/test", func() string {
+        // just some testing values to validate function's work
         return "Great Circle Distance is " + findGreatCircleDistance(42.25,120.2,30.25,112.2) + " km"
     	})
     m.Run()

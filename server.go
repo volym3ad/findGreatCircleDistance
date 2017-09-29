@@ -119,9 +119,27 @@ func main() {
         return strings.Join(values[:], "\n")
         })
 
+    // delete history
+    m.Delete("/history", func() string {
+        
+        for i:=0; i < iter-1; i++ {
+            client.Del(strconv.Itoa(i+1))
+        }
+        // add exceptions when fetching key id
+        // and database connection exception....maybe..
+
+        iter = 1
+        return "Delete successful"
+        })
+
     m.Get("/test", func() string {
         // just some testing values to validate function's work
         return "Great Circle Distance is " + findGreatCircleDistance(42.25,120.2,30.25,112.2) + " km"
     	})
+
+    // processing 404 errors
+    m.NotFound(func() string { 
+        return "Seems like you doing something nasty.. 404 error"
+        })
     m.Run()
 }
